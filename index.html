@@ -42,18 +42,22 @@
   .btn, select, input[type="range"]{background:#12161c; color:var(--ink); border:1px solid var(--line); border-radius:10px; padding:8px 10px; font:inherit}
   .btn{cursor:pointer}
   .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-  .list{max-height:460px; overflow:auto}
-  .track{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line)}
+  .list{max-height:520px; overflow:auto}
+  .track{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:start; padding:10px 12px; border-bottom:1px solid var(--line)}
   .track.active{background:rgba(255,255,255,.03); border-left:3px solid var(--accent)}
   .seed{font-size:11px; color:var(--ink-dim)}
   .pill{font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--ink-dim)}
-  .tone{padding:12px 12px 14px; display:grid; gap:10px; border-top:1px dashed var(--line)}
+  .tone{padding:12px; display:grid; gap:10px; border-top:1px dashed var(--line)}
   .tone-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px}
   .meta{padding:12px; color:var(--ink-dim); font-size:13px; border-top:1px solid var(--line)}
   .mantras{display:grid; gap:6px; padding:10px 12px; border-top:1px dashed var(--line); background:linear-gradient(180deg, rgba(255,106,61,.07), transparent)}
   .mantras div{font-size:12.5px}
   .tiny{opacity:.8; font-size:12px}
   .loop{margin-left:8px}
+  .practice{margin-top:8px; padding:10px; border:1px dashed var(--line); border-radius:10px; background:rgba(255,255,255,.03); display:none}
+  .practice.open{display:block}
+  .practice h4{margin:0 0 6px 0; font-size:12px; color:var(--ink-dim); letter-spacing:.06em; text-transform:uppercase}
+  /* Mini player */
   .mini{
     position:fixed; right:12px; bottom:12px; z-index:20;
     display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:12px;
@@ -61,6 +65,10 @@
   }
   .mini strong{font-size:12px}
   .mini .btn{padding:6px 8px}
+  /* Tone Lab */
+  .lab{display:grid; gap:8px; border-top:1px dashed var(--line); padding:10px; background:linear-gradient(180deg, rgba(213,199,255,.05), transparent)}
+  .lab .row{align-items:flex-end}
+  .lab label{font-size:12px; color:var(--ink-dim)}
 </style>
 </head>
 <body data-mode="wake">
@@ -73,10 +81,10 @@
 </header>
 
 <main>
+  <!-- LEFT: Player & transport -->
   <section class="panel">
     <h2>Player · Wake / Dream</h2>
     <div class="player-wrap">
-      <!-- YouTube iframe managed by IFrame API -->
       <div id="ytContainer"><div id="yt" class="player"></div></div>
 
       <div class="controls">
@@ -95,19 +103,48 @@
       </div>
 
       <div class="tone">
-        <div class="row"><strong>Tone bed</strong><span class="tiny"> · 128.15 / 160 / 256 Hz</span></div>
+        <div class="row"><strong>Tone bed</strong><span class="tiny"> · richer, body-feel tuning</span></div>
         <div class="tone-grid">
           <div class="row">
             <button class="btn" id="toneToggle" aria-pressed="false">Enable Tone</button>
-            <select id="freq">
-              <option value="128.15">128.15 Hz (root+)</option>
-              <option value="160">160 Hz (magnet)</option>
-              <option value="256">256 Hz (clarity)</option>
+            <select id="preset">
+              <option value="root">Root+ 128.15</option>
+              <option value="root_sub">Root+Sub (64+128)</option>
+              <option value="root_harm">Root+Harm (128+256)</option>
+              <option value="magnet">Magnet 160</option>
+              <option value="clarity">Clarity 256</option>
+              <option value="tremor">Tremor (128.15 AM 5.5Hz)</option>
+              <option value="pulse">Pulse (128.15 AM 1.2Hz)</option>
             </select>
           </div>
           <div class="row">
-            <input id="gain" type="range" min="0" max="1" step="0.01" value="0.18" aria-label="Tone volume">
+            <label>Wave
+              <select id="wave">
+                <option value="sine">sine</option>
+                <option value="triangle">triangle</option>
+                <option value="square">square</option>
+                <option value="rich">rich</option>
+              </select>
+            </label>
+            <label>Freq <input id="freq" type="number" step="0.01" value="128.15" style="width:90px"></label>
+            <label>Gain <input id="gain" type="range" min="0" max="1" step="0.01" value="0.20"></label>
             <button class="btn" id="mute">Mute</button>
+          </div>
+        </div>
+
+        <!-- Tone Lab -->
+        <div class="lab">
+          <div class="row">
+            <label>AM rate (Hz) <input id="amRate" type="number" step="0.1" value="5.5" style="width:80px"></label>
+            <label>AM depth <input id="amDepth" type="range" min="0" max="1" step="0.01" value="0.35"></label>
+            <label>Sub 64Hz <input id="mixSub" type="range" min="0" max="0.5" step="0.01" value="0.12"></label>
+            <label>Harm 256Hz <input id="mixHarm" type="range" min="0" max="0.5" step="0.01" value="0.10"></label>
+          </div>
+          <div class="row" style="margin-top:6px">
+            <button class="btn" id="sinus">💨 Sinus Clear (210 Hz · 30s)</button>
+            <span id="sinusTimer" class="tiny"></span>
+            <button class="btn" id="renderBG">Render Background Tone (60s)</button>
+            <span class="tiny">uses current Tone Lab mix → screen-off feel</span>
           </div>
         </div>
       </div>
@@ -117,14 +154,15 @@
     </div>
   </section>
 
+  <!-- RIGHT: Song list with seeds + practice -->
   <section class="panel">
     <h2>Seven · Seeds (+ Haze)</h2>
     <div class="list" id="trackList"></div>
-    <div class="meta tiny">Tip: Start playback, then enable Background Mode for screen-off listening. AirPlay targets the background loop.</div>
+    <div class="meta tiny">Tip: Tap Play, then “Render Background Tone (60s)” for a screen-off, more tactile loop; AirPlay targets that loop.</div>
   </section>
 </main>
 
-<!-- Hidden background audio (looping WAV, AirPlay-able, continues screen off) -->
+<!-- Hidden background audio (AirPlay/screen-off) -->
 <audio id="bgAudio" loop playsinline x-webkit-airplay="allow" style="display:none"></audio>
 
 <!-- Mini player -->
@@ -138,79 +176,94 @@
   <button class="btn" id="mAir">▸ AirPlay</button>
 </div>
 
-<!-- YouTube IFrame API (required for reliable "ended" detection and controls) -->
 <script src="https://www.youtube.com/iframe_api"></script>
 <script>
-/* ---------- Tracks (same set incl. Lavender Haze) ---------- */
+/* ---------- Tracks with notes + practices (unchanged from your last version) ---------- */
 const TRACKS = [
   { title:"Lavender Haze", id:"h8DLofLM7No", fallback:"mkR_Qwix4Ho",
     colorWake:"#b38be7", colorDream:"#cbb6ff",
-    wake:{ mantra:"Hold the haze", seed:"Breathe 4-4 under a lavender dome; keep outside noise out." },
-    dream:{ mantra:"Glow stays ours", seed:"Violet mist expands and softens until only warmth remains." },
-    note:"Private-aura protection / dreamlike unity field."
+    wake:{ mantra:"Hold the haze", seed:"Breathe 4-4; picture a lavender dome sealing the field from noise." },
+    dream:{ mantra:"Glow stays ours", seed:"Let violet mist expand + fade with each exhale until only warmth remains." },
+    note:"Private-aura protection / dreamlike unity field.",
+    practice:"Imagine violet haze sealing your body’s edge. Count 4 in / 6 out until breath feels like glow."
   },
   { title:"Lover", id:"-BjZmE2gtdo", fallback:"cvUAzpn48xA",
     colorWake:"#f2a2b6", colorDream:"#d5c7ff",
-    wake:{ mantra:"We are whole", seed:"Rose ring around both hearts." },
-    dream:{ mantra:"Soul’s embrace", seed:"Lavender orb pulsing between you." },
-    note:"Resonance of union / safe heart."
+    wake:{ mantra:"We are whole", seed:"30s soft-breath gaze; rose-pink ring around both hearts." },
+    dream:{ mantra:"Soul’s embrace", seed:"Lavender orb pulsing between you; breathe 4–6 to settle." },
+    note:"Resonance of union / safe heart.",
+    practice:"Write one line: “I am safe when …”. Whisper it three times, lengthening the exhale."
   },
   { title:"august", id:"nn_0zPAfyo8", fallback:"yA8Lm2XbQVk",
     colorWake:"#f4d06f", colorDream:"#f2b4a6",
-    wake:{ mantra:"Soft light lingers", seed:"Warm memory → solar glow." },
+    wake:{ mantra:"Soft light lingers", seed:"Recall one warm memory; solar plexus glow." },
     dream:{ mantra:"Fade into you", seed:"Float the scene away like mist." },
-    note:"Transient magic / memory cultivation."
+    note:"Transient magic / memory cultivation.",
+    practice:"Describe a warm memory in exactly 10 words, then erase it slowly. Notice the feeling that remains."
   },
   { title:"exile (ft. Bon Iver)", id:"osdoLjUNFnA", fallback:"ZmPIi5kCc2k",
     colorWake:"#7f8aa5", colorDream:"#e6eef8",
-    wake:{ mantra:"Call and echo", seed:"Figure-8 at heart level." },
-    dream:{ mantra:"Cross our miles", seed:"Silver thread between two shores." },
-    note:"Dual fields, meeting edges."
+    wake:{ mantra:"Call and echo", seed:"Trace a figure-eight with your index finger at heart level." },
+    dream:{ mantra:"Cross our miles", seed:"Visualize a silver thread connecting two shores; breathe along it." },
+    note:"Dual fields, meeting edges.",
+    practice:"Write two short letters: you→them and them→you (do not send). Read both, then title the page “Understanding.”"
   },
   { title:"Delicate", id:"tCXGJQYZ9JA", fallback:"tCXGJQYZ9JA",
     colorWake:"#ffe6b3", colorDream:"#fff7e6",
-    wake:{ mantra:"Softly revealed", seed:"Relax jaw/eyes; say your name kindly." },
-    dream:{ mantra:"Tender core", seed:"Cup hands at sternum; small candle." },
-    note:"Vulnerability threshold."
+    wake:{ mantra:"Softly revealed", seed:"Relax jaw/eyes; whisper your name kindly once." },
+    dream:{ mantra:"Tender core", seed:"Cup both hands at sternum; feel a small candle there." },
+    note:"Vulnerability threshold.",
+    practice:"Say your full name out loud. If any part feels shy, breathe there until the shoulders drop."
   },
   { title:"State of Grace (Taylor’s Version)", id:"-mrC5tRkxrY", fallback:"-mrC5tRkxrY",
     colorWake:"#8fe3f6", colorDream:"#bfeff8",
-    wake:{ mantra:"Wide horizon", seed:"Spine tall; crown to sky." },
-    dream:{ mantra:"Ever gentle", seed:"Wind through trees; long exhale." },
-    note:"Open sky, foundational field."
+    wake:{ mantra:"Wide horizon", seed:"Stand or sit tall; crown lifts like sky opening." },
+    dream:{ mantra:"Ever gentle", seed:"Picture wind in trees; lengthen exhale." },
+    note:"Open sky, foundational field.",
+    practice:"Look to the farthest horizon. Inhale to that line; exhale back to your chest."
   },
   { title:"All Too Well — Short Film", id:"tollGa3S0o8", fallback:"sRxrwjOtIag",
     colorWake:"#7a1f2b", colorDream:"#ad5a67",
-    wake:{ mantra:"Remember, release", seed:"Name the lesson; dissolve." },
-    dream:{ mantra:"Wash me free", seed:"Warm rain rinses the scene." },
-    note:"Depth, memory excavation."
+    wake:{ mantra:"Remember, release", seed:"Name the lesson aloud once; let it dissolve." },
+    dream:{ mantra:"I keep the lesson", seed:"Imagine warm rain rinsing the scene into earth." },
+    note:"Depth, memory excavation.",
+    practice:"List 3 neutral facts about a past moment. Circle each; mark “kept / released.” Exhale slowly."
   },
   { title:"The Archer", id:"8KpKc3C9V3w", fallback:"8KpKc3C9V3w",
     colorWake:"#b5c7ff", colorDream:"#cdbdff",
-    wake:{ mantra:"Aim into light", seed:"Steady target; breath to center." },
-    dream:{ mantra:"See my heart", seed:"Hand on chest; count 5 beats." },
-    note:"Inner witness, shadow/light integration."
+    wake:{ mantra:"Aim into light", seed:"See a steady target; align breath to the center." },
+    dream:{ mantra:"See my heart", seed:"Hand on chest; count 5 heartbeats softly." },
+    note:"Inner witness, shadow/light integration.",
+    practice:"Stand still 60s. Point to a spot; breathe until heartbeat steadies. Whisper what you truly want."
   }
 ];
 
-/* ---------- State & elements ---------- */
-let index=0, loopQueue=true;
-const app=document.body;
-const videoSelect=document.getElementById('videoSelect');
-const prevBtn=document.getElementById('prev'), nextBtn=document.getElementById('next');
-const playBtn=document.getElementById('play'), pauseBtn=document.getElementById('pause');
-const loopChk=document.getElementById('loop');
-const meta=document.getElementById('meta'), mantras=document.getElementById('mantras');
-const trackList=document.getElementById('trackList');
-const wakeBtn=document.getElementById('wakeBtn'), dreamBtn=document.getElementById('dreamBtn');
-const bgBtn=document.getElementById('bgMode'), airBtn=document.getElementById('airplayBtn');
-const bgAudio=document.getElementById('bgAudio');
-const miniTitle=document.getElementById('miniTitle');
-const mPrev=document.getElementById('mPrev'), mNext=document.getElementById('mNext');
-const mPlay=document.getElementById('mPlay'), mPause=document.getElementById('mPause');
-const mTone=document.getElementById('mTone'), mAir=document.getElementById('mAir');
+/* ---------- Persist helpers ---------- */
+const mem = {
+  get(k, d){ try{ const v=localStorage.getItem(k); return v===null? d : JSON.parse(v);}catch(_){return d;} },
+  set(k, v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(_){} }
+};
 
-/* ---------- Build list ---------- */
+/* ---------- State & elements ---------- */
+let index = mem.get('ember_index', 0) % TRACKS.length;
+let loopQueue = mem.get('ember_loop', true);
+const app = document.body;
+const videoSelect = document.getElementById('videoSelect');
+const prevBtn = document.getElementById('prev'), nextBtn = document.getElementById('next');
+const playBtn = document.getElementById('play'), pauseBtn = document.getElementById('pause');
+const loopChk = document.getElementById('loop');
+const meta = document.getElementById('meta'), mantras = document.getElementById('mantras');
+const trackList = document.getElementById('trackList');
+const wakeBtn = document.getElementById('wakeBtn'), dreamBtn = document.getElementById('dreamBtn');
+const bgBtn = document.getElementById('bgMode'), airBtn = document.getElementById('airplayBtn');
+const bgAudio = document.getElementById('bgAudio');
+const miniTitle = document.getElementById('miniTitle');
+const mPrev = document.getElementById('mPrev'), mNext = document.getElementById('mNext');
+const mPlay = document.getElementById('mPlay'), mPause = document.getElementById('mPause');
+const mTone = document.getElementById('mTone'), mAir = document.getElementById('mAir');
+const sinusBtn = document.getElementById('sinus'), sinusTimer = document.getElementById('sinusTimer');
+
+/* ---------- Build list (with Practice toggle) ---------- */
 function option(t,i){ const o=document.createElement('option'); o.value=i; o.textContent=t.title; return o; }
 TRACKS.forEach((t,i)=>videoSelect.appendChild(option(t,i)));
 
@@ -218,38 +271,45 @@ function trackRow(t,i){
   const row=document.createElement('div'); row.className='track'; row.dataset.index=i;
   const dot=document.createElement('div'); dot.className='ember-dot'; dot.style.width='8px'; dot.style.height='8px';
   dot.style.background=app.dataset.mode==='wake'?t.colorWake:t.colorDream;
-  const title=document.createElement('div'); title.innerHTML=`<strong>${t.title}</strong><div class="tiny">${t.note}</div>`;
+  const title=document.createElement('div'); title.innerHTML=`<strong>${t.title}</strong>
+    <div class="tiny">${t.note}</div>`;
   const actions=document.createElement('div');
   const seed=document.createElement('button'); seed.className='btn'; seed.textContent='Seed'; seed.onclick=()=>showSeed(i);
-  actions.appendChild(seed);
+  const prac=document.createElement('button'); prac.className='btn'; prac.textContent='Practice'; 
+  const pracBox=document.createElement('div'); pracBox.className='practice';
+  pracBox.innerHTML = `<h4>Practice</h4><div>${t.practice}</div>`;
+  prac.onclick=(e)=>{ e.stopPropagation(); pracBox.classList.toggle('open'); };
+  actions.appendChild(seed); actions.appendChild(prac);
   row.appendChild(dot); row.appendChild(title); row.appendChild(actions);
-  row.onclick=(e)=>{ if(e.target===seed) return; load(i,true); };
+  row.appendChild(pracBox);
+  row.onclick=(e)=>{ if(e.target===seed || e.target===prac) return; load(i,true); };
   return row;
 }
 function rebuildList(){ trackList.innerHTML=''; TRACKS.forEach((t,i)=>trackList.appendChild(trackRow(t,i))); highlightActive(); }
 function highlightActive(){ [...trackList.children].forEach(el=>el.classList.toggle('active', +el.dataset.index===index)); }
 
-/* ---------- YouTube Player (with reliable end detection) ---------- */
+/* ---------- YouTube Player ---------- */
 let player=null;
 function onYouTubeIframeAPIReady(){
   player = new YT.Player('yt', {
-    width: '100%', height: '100%', videoId: TRACKS[0].id,
+    width:'100%', height:'100%', videoId: TRACKS[index].id,
     playerVars: { rel:0, modestbranding:1, playsinline:1, autoplay:0 },
     events: {
-      'onReady': ()=>{ load(0,false); },
-      'onStateChange': onPlayerStateChange
+      'onReady': ()=>{ load(index,false); },
+      'onStateChange': (ev)=>{ if(ev.data === YT.PlayerState.ENDED) step(+1); },
+      'onError': onPlayerError
     }
   });
 }
-function onPlayerStateChange(ev){
-  if(ev.data === YT.PlayerState.ENDED){
-    step(+1);
-  }
+function onPlayerError(){
+  const t = TRACKS[index];
+  if(t && t.fallback && player && player.loadVideoById){ player.loadVideoById(t.fallback, 0, "large"); }
+  else { step(+1); }
 }
 
 /* ---------- Load / Play controls ---------- */
 function load(i,scrollTo=false){
-  index=(i+TRACKS.length)%TRACKS.length;
+  index=(i+TRACKS.length)%TRACKS.length; mem.set('ember_index', index);
   videoSelect.value=index;
   const t=TRACKS[index];
   if(player && player.loadVideoById){ player.loadVideoById(t.id, 0, "large"); player.pauseVideo(); }
@@ -260,80 +320,236 @@ function play(){ if(player) player.playVideo(); }
 function pause(){ if(player) player.pauseVideo(); }
 prevBtn.onclick=()=>step(-1); nextBtn.onclick=()=>step(+1);
 mPrev.onclick=()=>step(-1); mNext.onclick=()=>step(+1);
-loopChk.onchange=()=>{ loopQueue=loopChk.checked; };
+loopChk.onchange=()=>{ loopQueue=loopChk.checked; mem.set('ember_loop', loopQueue); };
 videoSelect.onchange=()=>{ load(+videoSelect.value,true); };
 playBtn.onclick=play; pauseBtn.onclick=pause;
 mPlay.onclick=play; mPause.onclick=pause;
-
 function step(dir){
-  const next = index+dir;
+  const next=index+dir;
   if(next<0 && !loopQueue) return;
   if(next>=TRACKS.length && !loopQueue) return;
   load((next+TRACKS.length)%TRACKS.length,true);
 }
 
 /* ---------- Mode ---------- */
+const savedMode = mem.get('ember_mode', 'wake');
+app.dataset.mode = savedMode;
+(savedMode==='wake'?wakeBtn:dreamBtn).classList.add('active');
 wakeBtn.onclick=()=>setMode('wake'); dreamBtn.onclick=()=>setMode('dream');
 function setMode(m){
-  app.dataset.mode=m;
-  wakeBtn.classList.toggle('active', m==='wake');
-  dreamBtn.classList.toggle('active', m==='dream');
+  app.dataset.mode=m; mem.set('ember_mode', m);
+  wakeBtn.classList.toggle('active', m==='wake'); dreamBtn.classList.toggle('active', m==='dream');
   wakeBtn.setAttribute('aria-pressed', m==='wake'); dreamBtn.setAttribute('aria-pressed', m==='dream');
   updateMeta(); rebuildList();
 }
 
-/* ---------- Tone bed (Web Audio) w/ 128.15 ---------- */
-let AC=null, osc=null, gainNode=null, muted=false;
+/* ---------- Tone Engine (richer) ---------- */
+let AC=null, mainGain=null, modGain=null, oscMain=null, oscSub=null, oscHarm=null, lfo=null;
+let muted=false;
+
 const toneToggle=document.getElementById('toneToggle');
-const freqSel=document.getElementById('freq');
-const gain=document.getElementById('gain');
-const mute=document.getElementById('mute');
+const presetSel=document.getElementById('preset');
+const waveSel=document.getElementById('wave');
+const freqIn=document.getElementById('freq');
+const gainIn=document.getElementById('gain');
+const muteBtn=document.getElementById('mute');
+
+function ensureAudio(){
+  if(AC) return;
+  AC=new (window.AudioContext||window.webkitAudioContext)();
+  mainGain=AC.createGain(); mainGain.gain.setValueAtTime(0, AC.currentTime);
+  modGain=AC.createGain(); // LFO depth into mainGain.gain
+  modGain.gain.value=0;
+
+  // create oscillators
+  oscMain=AC.createOscillator(); oscSub=AC.createOscillator(); oscHarm=AC.createOscillator(); lfo=AC.createOscillator();
+  setWaveform(oscMain, waveSel.value);
+  setWaveform(oscSub, 'sine'); setWaveform(oscHarm, 'sine'); lfo.type='sine';
+
+  // LFO controls mainGain via AudioParam
+  lfo.connect(modGain);
+  modGain.connect(mainGain.gain);
+
+  oscMain.connect(mainGain);
+  oscSub.connect(mainGain);
+  oscHarm.connect(mainGain);
+  mainGain.connect(AC.destination);
+
+  const now=AC.currentTime;
+  oscMain.start(now); oscSub.start(now); oscHarm.start(now); lfo.start(now);
+}
+
+function setWaveform(osc, type){
+  if(type!=='rich'){ osc.type=type; return; }
+  // Custom rich periodic wave (adds subtle odd/even harmonics)
+  const harmonics=16, re=new Float32Array(harmonics), im=new Float32Array(harmonics);
+  for(let k=1;k<harmonics;k++){
+    const odd = (k%2===1)? 1:0;
+    re[k] = (odd? 0.9/k : 0.4/k); // mix odd/even gently
+  }
+  const wave=(AC||window.AudioContext).prototype.createPeriodicWave ? (AC||new AudioContext()).createPeriodicWave(re, im, {disableNormalization:false}) : null;
+  try{ osc.setPeriodicWave(wave); }catch(e){ osc.type='triangle'; }
+}
+
+function applyToneSettings(){
+  if(!AC) return;
+  const f = parseFloat(freqIn.value)||128.15;
+  const subMix = parseFloat(document.getElementById('mixSub').value)||0;
+  const harmMix= parseFloat(document.getElementById('mixHarm').value)||0;
+  const amRate = parseFloat(document.getElementById('amRate').value)||0;
+  const amDepth= parseFloat(document.getElementById('amDepth').value)||0;
+
+  const now=AC.currentTime;
+  // freq
+  oscMain.frequency.setTargetAtTime(f, now, 0.01);
+  oscSub.frequency.setTargetAtTime(f/2, now, 0.01);
+  oscHarm.frequency.setTargetAtTime(f*2, now, 0.01);
+  // gains
+  const base = parseFloat(gainIn.value)||0.2;
+  const targetGain = muted? 0 : base;
+  mainGain.gain.cancelScheduledValues(now);
+  mainGain.gain.setTargetAtTime(targetGain, now, 0.03);
+
+  // relative partial levels
+  const subGain = base*subMix;
+  const harmGain= base*harmMix;
+
+  // Routing trick: use individual gains via constant source *not necessary* — simpler:
+  // We’ll modulate by setting osc amplitudes via separate Gains:
+  // (rebuild simple per-osc gains)
+  if(!oscMain._gain){ oscMain._gain=AC.createGain(); oscMain.disconnect(); oscMain.connect(oscMain._gain).connect(mainGain); }
+  if(!oscSub._gain){ oscSub._gain=AC.createGain(); oscSub.disconnect(); oscSub.connect(oscSub._gain).connect(mainGain); }
+  if(!oscHarm._gain){ oscHarm._gain=AC.createGain(); oscHarm.disconnect(); oscHarm.connect(oscHarm._gain).connect(mainGain); }
+
+  oscMain._gain.gain.setTargetAtTime(base, now, 0.03);
+  oscSub._gain.gain.setTargetAtTime(subGain, now, 0.03);
+  oscHarm._gain.gain.setTargetAtTime(harmGain, now, 0.03);
+
+  // LFO (tremolo)
+  lfo.frequency.setTargetAtTime(amRate, now, 0.03);
+  modGain.gain.setTargetAtTime(amDepth*base, now, 0.05);
+}
+
+function setPreset(name){
+  if(name==='root'){ freqIn.value='128.15'; document.getElementById('mixSub').value=0.10; document.getElementById('mixHarm').value=0.08; document.getElementById('amRate').value=3.0; document.getElementById('amDepth').value=0.20; waveSel.value='rich'; }
+  if(name==='root_sub'){ freqIn.value='128.15'; document.getElementById('mixSub').value=0.20; document.getElementById('mixHarm').value=0.05; document.getElementById('amRate').value=2.0; document.getElementById('amDepth').value=0.25; waveSel.value='triangle'; }
+  if(name==='root_harm'){ freqIn.value='128.15'; document.getElementById('mixSub').value=0.08; document.getElementById('mixHarm').value=0.15; document.getElementById('amRate').value=4.0; document.getElementById('amDepth').value=0.18; waveSel.value='rich'; }
+  if(name==='magnet'){ freqIn.value='160'; document.getElementById('mixSub').value=0.08; document.getElementById('mixHarm').value=0.10; document.getElementById('amRate').value=5.0; document.getElementById('amDepth').value=0.25; waveSel.value='sine'; }
+  if(name==='clarity'){ freqIn.value='256'; document.getElementById('mixSub').value=0.00; document.getElementById('mixHarm').value=0.12; document.getElementById('amRate').value=6.0; document.getElementById('amDepth').value=0.15; waveSel.value='sine'; }
+  if(name==='tremor'){ freqIn.value='128.15'; document.getElementById('mixSub').value=0.15; document.getElementById('mixHarm').value=0.08; document.getElementById('amRate').value=5.5; document.getElementById('amDepth').value=0.35; waveSel.value='rich'; }
+  if(name==='pulse'){ freqIn.value='128.15'; document.getElementById('mixSub').value=0.10; document.getElementById('mixHarm').value=0.05; document.getElementById('amRate').value=1.2; document.getElementById('amDepth').value=0.45; waveSel.value='square'; }
+  applyToneSettings();
+}
+
+document.getElementById('mTone').onclick=()=>toneToggle.click();
 toneToggle.onclick=()=>{
-  if(!AC){
-    AC=new (window.AudioContext||window.webkitAudioContext)();
-    osc=AC.createOscillator(); gainNode=AC.createGain();
-    osc.type='sine'; osc.frequency.value=+freqSel.value; // fractional ok (128.15)
-    gainNode.gain.value=+gain.value;
-    osc.connect(gainNode).connect(AC.destination);
-    osc.start();
-    toneToggle.textContent='Disable Tone';
-    toneToggle.setAttribute('aria-pressed','true');
+  if(!AC){ ensureAudio(); }
+  // fade in/out
+  const now=AC.currentTime;
+  if(mainGain.gain.value===0){
+    applyToneSettings();
+    mainGain.gain.setTargetAtTime(parseFloat(gainIn.value)||0.2, now, 0.05);
+    toneToggle.textContent='Disable Tone'; toneToggle.setAttribute('aria-pressed','true');
   }else{
-    try{osc.stop();}catch(e){} AC.close(); AC=null; osc=null; gainNode=null;
-    toneToggle.textContent='Enable Tone';
-    toneToggle.setAttribute('aria-pressed','false');
+    mainGain.gain.setTargetAtTime(0, now, 0.05);
+    toneToggle.textContent='Enable Tone'; toneToggle.setAttribute('aria-pressed','false');
   }
 };
-freqSel.onchange=()=>{ if(osc) osc.frequency.value=+freqSel.value; };
-gain.oninput=()=>{ if(gainNode) gainNode.gain.value=+gain.value; };
-mute.onclick=()=>{
-  muted=!muted; if(gainNode){ gainNode.gain.value = muted ? 0 : +gain.value; }
-  mute.textContent = muted ? 'Unmute' : 'Mute';
+presetSel.onchange=()=>{ setPreset(presetSel.value); };
+waveSel.onchange = ()=>{ if(!AC) return; setWaveform(oscMain, waveSel.value); };
+[freqIn, gainIn, document.getElementById('mixSub'), document.getElementById('mixHarm'), document.getElementById('amRate'), document.getElementById('amDepth')].forEach(el=>{
+  el.addEventListener('input', ()=>applyToneSettings());
+});
+muteBtn.onclick=()=>{
+  muted=!muted;
+  if(AC){
+    const now=AC.currentTime;
+    mainGain.gain.setTargetAtTime(muted?0:(parseFloat(gainIn.value)||0.2), now, 0.03);
+  }
+  muteBtn.textContent = muted ? 'Unmute' : 'Mute';
 };
-mTone.onclick=()=>toneToggle.click();
+// initialize defaults
+setPreset('root');
 
-/* ---------- Background Mode + AirPlay (robust) ---------- */
-let bgOn=false;
+/* ---------- Background Tone rendering (60s layered WAV) ---------- */
+const renderBtn=document.getElementById('renderBG');
+function makeLayeredWavDataUrl(freq, seconds, base, subMix, harmMix, amRate, amDepth, wave='sine'){
+  const rate=44100, N=Math.floor(rate*seconds), twoPI=2*Math.PI;
+  const buf=new Uint8Array(44+N*2); // 16-bit mono WAV
+  function wr(off,val,bytes){ for(let i=0;i<bytes;i++) buf[off+i]=(val>>(8*i))&255; }
+  // Header
+  const chunkSize=36+N*2; buf.set([82,73,70,70]); wr(4,chunkSize,4); buf.set([87,65,86,69],8);
+  buf.set([102,109,116,32],12); wr(16,16,4); wr(20,1,2); wr(22,1,2); wr(24,rate,4); wr(28,rate*2,4); wr(32,2,2); wr(34,16,2);
+  buf.set([100,97,116,97],36); wr(40,N*2,4);
+  function oscSample(phase, type){
+    if(type==='sine') return Math.sin(phase);
+    if(type==='triangle'){ const t=(phase/Math.PI)%2; return 2*Math.abs(t-1)-1; }
+    if(type==='square') return (phase% (2*Math.PI))<Math.PI? 1:-1;
+    // rich: blend sine + gentle 3rd/5th
+    const s = Math.sin(phase);
+    return 0.72*s + 0.18*Math.sin(3*phase) + 0.10*Math.sin(5*phase);
+  }
+  let pMain=0, pSub=0, pHarm=0, pLFO=0;
+  const dMain=twoPI*freq/rate, dSub=twoPI*(freq/2)/rate, dHarm=twoPI*(freq*2)/rate, dLFO=twoPI*amRate/rate;
+  for(let n=0;n<N;n++){
+    const lfo = (amDepth>0)? ((Math.sin(pLFO)+1)/2)*amDepth : 0;
+    const amp = base + lfo*base;
+    const sMain = oscSample(pMain, wave);
+    const sSub  = oscSample(pSub,  'sine');
+    const sHarm = oscSample(pHarm, 'sine');
+    let s = amp * ( sMain + subMix*sSub + harmMix*sHarm );
+    // soft limiter
+    s = Math.tanh(s*1.2);
+    const w = Math.max(-32767, Math.min(32767, (s*32767)|0));
+    wr(44+n*2, w<0? w+65536 : w, 2);
+    pMain+=dMain; pSub+=dSub; pHarm+=dHarm; pLFO+=dLFO;
+  }
+  return 'data:audio/wav;base64,'+btoa(String.fromCharCode(...buf));
+}
+renderBtn.onclick=()=>{
+  // pull current lab values
+  const f = parseFloat(freqIn.value)||128.15;
+  const base = parseFloat(gainIn.value)||0.2;
+  const subMix = parseFloat(document.getElementById('mixSub').value)||0;
+  const harmMix= parseFloat(document.getElementById('mixHarm').value)||0;
+  const amRate = parseFloat(document.getElementById('amRate').value)||0;
+  const amDepth= parseFloat(document.getElementById('amDepth').value)||0;
+  const wave = waveSel.value;
+  const url = makeLayeredWavDataUrl(f, 60, Math.min(base,0.25), subMix, harmMix, amRate, amDepth, wave);
+  bgAudio.src = url;
+  bgAudio.play().catch(()=>alert("Tap Play once, then render again."));
+  bgBtn.textContent='Background Mode: On (rich wav)';
+};
+
+/* ---------- AirPlay ---------- */
 document.getElementById('mAir').onclick=()=>airBtn.click();
 airBtn.onclick=()=>{
   if(bgAudio && typeof bgAudio.webkitShowPlaybackTargetPicker==='function'){
-    try{ bgAudio.webkitShowPlaybackTargetPicker(); }catch(e){}
-  }else{ alert("AirPlay picker not available here."); }
-};
-bgBtn.onclick=toggleBG;
-function toggleBG(){
-  if(!bgOn){
-    // Ensure a real audio stream (inline WAV) is present and audible:
-    bgAudio.src = makeWavDataUrl(+freqSel.value || 128.15, 3, 0.06); // 3s loop, slightly louder
-    const start = bgAudio.play();
-    if(start && start.catch){ start.catch(()=>alert("Tap Play once, then enable Background Mode.")); }
-    bgOn=true; bgBtn.textContent='Background Mode: On';
+    try{ bgAudio.webkitShowPlaybackTargetPicker(); }catch(_){}
   }else{
-    bgAudio.pause(); bgOn=false; bgBtn.textContent='Background Mode: Off';
+    alert("AirPlay picker not available here.");
   }
-}
+};
 
-/* Media Session: lock-screen control */
+/* ---------- Sinus Clear ---------- */
+sinusBtn.onclick = ()=>{
+  const dur = 30; let left = dur; sinusBtn.disabled = true;
+  sinusTimer.textContent = `· ${left}s`;
+  bgAudio.src = makeLayeredWavDataUrl(210, 10, 0.06, 0.00, 0.05, 0.0, 0.0, 'sine'); // light clarity + faint harmonic
+  bgAudio.loop=true; bgAudio.play();
+  const tick = setInterval(()=>{
+    left--; sinusTimer.textContent = `· ${left}s`;
+    if(left<=0){
+      clearInterval(tick);
+      const fade = setInterval(()=>{
+        bgAudio.volume = Math.max(0, bgAudio.volume - 0.05);
+        if(bgAudio.volume<=0){ clearInterval(fade); bgAudio.pause(); bgAudio.volume=1; sinusBtn.disabled=false; sinusTimer.textContent=''; }
+      },100);
+    }
+  },1000);
+};
+
+/* ---------- Media Session ---------- */
 function setMediaSession(title){
   if('mediaSession' in navigator){
     navigator.mediaSession.metadata = new MediaMetadata({ title, artist:'Taylor Swift · EMBER', album:'Illumina Anchor' });
@@ -357,26 +573,13 @@ function showSeed(i){
   alert(`${t.title} — ${app.dataset.mode.toUpperCase()}\n\nMantra: ${pack.mantra}\n\nSeed: ${pack.seed}`);
 }
 
-/* ---------- Inline WAV builder (fractional freq OK) ---------- */
-function makeWavDataUrl(freq, seconds, amplitude){
-  const rate=44100, N=Math.floor(rate*seconds), buf=new Uint8Array(44+N*2);
-  function wr(off, val, bytes){ for(let i=0;i<bytes;i++) buf[off+i]=(val>>(8*i))&255; }
-  // RIFF/WAVE header
-  const chunkSize=36+N*2; buf.set([82,73,70,70]); wr(4, chunkSize, 4); buf.set([87,65,86,69],8);
-  buf.set([102,109,116,32],12); wr(16,16,4); wr(20,1,2); wr(22,1,2); wr(24,rate,4); wr(28,rate*2,4); wr(32,2,2); wr(34,16,2);
-  buf.set([100,97,116,97],36); wr(40,N*2,4);
-  // samples
-  for(let n=0;n<N;n++){
-    const t=n/rate, s=Math.sin(2*Math.PI*freq*t)*amplitude; // freq may be 128.15
-    const v=Math.max(-1,Math.min(1,s)); const w=(v*32767)|0; // 16-bit
-    wr(44+n*2, w<0? w+65536 : w, 2);
-  }
-  return 'data:audio/wav;base64,'+btoa(String.fromCharCode(...buf));
-}
-
 /* ---------- Init ---------- */
-function rebuild(){ rebuildList(); load(0,false); }
-rebuild();
+let loopQueueInit = mem.get('ember_loop', true);
+loopChk.checked = !!loopQueueInit;
+rebuildList(); load(index,false);
+function rebuildList(){ trackList.innerHTML=''; TRACKS.forEach((t,i)=>trackList.appendChild(trackRow(t,i))); highlightActive(); }
+function highlightActive(){ [...trackList.children].forEach(el=>el.classList.toggle('active', +el.dataset.index===index)); }
+function step(dir){ const next=index+dir; if(next<0 && !loopQueue) return; if(next>=TRACKS.length && !loopQueue) return; load((next+TRACKS.length)%TRACKS.length,true); }
 </script>
 </body>
 </html>
