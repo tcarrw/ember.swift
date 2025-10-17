@@ -10,8 +10,7 @@
 <style>
   :root{
     --bg:#0b0d11; --ink:#e9ecf1; --ink-dim:#aeb6c3;
-    --ember:#ff6a3d; --rose:#f2a2b6; --lav:#d5c7ff; --gold:#f4d06f; --aqua:#7bdff2; --garnet:#7a1f2b; --periw:#b5c7ff;
-    --card:#12161c; --card-2:#0f1318; --line:#1c2430; --accent:var(--ember);
+    --ember:#ff6a3d; --lav:#d5c7ff; --card:#12161c; --card-2:#0f1318; --line:#1c2430; --accent:var(--ember);
   }
   [data-mode="dream"]{ --bg:#0a0b12; --ink:#e6e8ff; --accent:#d5c7ff; }
   *{box-sizing:border-box}
@@ -55,8 +54,6 @@
   .mantras div{font-size:12.5px}
   .tiny{opacity:.8; font-size:12px}
   .loop{margin-left:8px}
-
-  /* Mini player */
   .mini{
     position:fixed; right:12px; bottom:12px; z-index:20;
     display:flex; align-items:center; gap:8px; padding:8px 10px; border-radius:12px;
@@ -76,13 +73,11 @@
 </header>
 
 <main>
-  <!-- LEFT: Player & transport -->
   <section class="panel">
     <h2>Player · Wake / Dream</h2>
     <div class="player-wrap">
-      <iframe id="yt" class="player"
-        allow="autoplay; accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-        allowfullscreen></iframe>
+      <!-- YouTube iframe managed by IFrame API -->
+      <div id="ytContainer"><div id="yt" class="player"></div></div>
 
       <div class="controls">
         <div class="row">
@@ -100,12 +95,12 @@
       </div>
 
       <div class="tone">
-        <div class="row"><strong>Tone bed</strong><span class="tiny"> · 128 / 160 / 256 Hz</span></div>
+        <div class="row"><strong>Tone bed</strong><span class="tiny"> · 128.15 / 160 / 256 Hz</span></div>
         <div class="tone-grid">
           <div class="row">
             <button class="btn" id="toneToggle" aria-pressed="false">Enable Tone</button>
             <select id="freq">
-              <option value="128">128 Hz (root)</option>
+              <option value="128.15">128.15 Hz (root+)</option>
               <option value="160">160 Hz (magnet)</option>
               <option value="256">256 Hz (clarity)</option>
             </select>
@@ -122,20 +117,19 @@
     </div>
   </section>
 
-  <!-- RIGHT: Song list with seeds -->
   <section class="panel">
     <h2>Seven · Seeds (+ Haze)</h2>
     <div class="list" id="trackList"></div>
-    <div class="meta tiny">Design: fire-vein overlays (alter.fire) · cyclical palette shift (t=m=e=d) · froot seeds per track · background loop for walks.</div>
+    <div class="meta tiny">Tip: Start playback, then enable Background Mode for screen-off listening. AirPlay targets the background loop.</div>
   </section>
 </main>
 
-<!-- Hidden background audio anchor (enables screen-off + AirPlay) -->
+<!-- Hidden background audio (looping WAV, AirPlay-able, continues screen off) -->
 <audio id="bgAudio" loop playsinline x-webkit-airplay="allow" style="display:none"></audio>
 
 <!-- Mini player -->
 <div class="mini" id="mini">
-  <strong id="miniTitle">Lavender Haze</strong>
+  <strong id="miniTitle">—</strong>
   <button class="btn" id="mPrev">◀︎</button>
   <button class="btn" id="mPlay">Play</button>
   <button class="btn" id="mPause">Pause</button>
@@ -144,52 +138,50 @@
   <button class="btn" id="mAir">▸ AirPlay</button>
 </div>
 
+<!-- YouTube IFrame API (required for reliable "ended" detection and controls) -->
+<script src="https://www.youtube.com/iframe_api"></script>
 <script>
-/* ---------- Data: 8 official tracks (incl. Lavender Haze) ---------- */
+/* ---------- Tracks (same set incl. Lavender Haze) ---------- */
 const TRACKS = [
-  // Lavender Haze — Official MV + lyric fallback
-  {
-    title:"Lavender Haze",
-    id:"h8DLofLM7No",          // Official MV
-    fallback:"mkR_Qwix4Ho",    // Official lyric
+  { title:"Lavender Haze", id:"h8DLofLM7No", fallback:"mkR_Qwix4Ho",
     colorWake:"#b38be7", colorDream:"#cbb6ff",
-    wake:{ mantra:"Hold the haze", seed:"Breathe 4-4; picture a lavender dome sealing the field from noise." },
-    dream:{ mantra:"Glow stays ours", seed:"Let violet mist expand + fade with each exhale until only warmth remains." },
+    wake:{ mantra:"Hold the haze", seed:"Breathe 4-4 under a lavender dome; keep outside noise out." },
+    dream:{ mantra:"Glow stays ours", seed:"Violet mist expands and softens until only warmth remains." },
     note:"Private-aura protection / dreamlike unity field."
   },
   { title:"Lover", id:"-BjZmE2gtdo", fallback:"cvUAzpn48xA",
     colorWake:"#f2a2b6", colorDream:"#d5c7ff",
-    wake:{ mantra:"We are whole", seed:"30s soft-breath gaze; rose-pink ring around both hearts." },
-    dream:{ mantra:"Soul’s embrace", seed:"Lavender orb pulsing between you; breathe 4–6 to settle." },
+    wake:{ mantra:"We are whole", seed:"Rose ring around both hearts." },
+    dream:{ mantra:"Soul’s embrace", seed:"Lavender orb pulsing between you." },
     note:"Resonance of union / safe heart."
   },
   { title:"august", id:"nn_0zPAfyo8", fallback:"yA8Lm2XbQVk",
     colorWake:"#f4d06f", colorDream:"#f2b4a6",
-    wake:{ mantra:"Soft light lingers", seed:"Recall one warm memory; solar plexus glow." },
+    wake:{ mantra:"Soft light lingers", seed:"Warm memory → solar glow." },
     dream:{ mantra:"Fade into you", seed:"Float the scene away like mist." },
     note:"Transient magic / memory cultivation."
   },
   { title:"exile (ft. Bon Iver)", id:"osdoLjUNFnA", fallback:"ZmPIi5kCc2k",
     colorWake:"#7f8aa5", colorDream:"#e6eef8",
-    wake:{ mantra:"Call and echo", seed:"Trace a figure-eight at heart level." },
+    wake:{ mantra:"Call and echo", seed:"Figure-8 at heart level." },
     dream:{ mantra:"Cross our miles", seed:"Silver thread between two shores." },
     note:"Dual fields, meeting edges."
   },
   { title:"Delicate", id:"tCXGJQYZ9JA", fallback:"tCXGJQYZ9JA",
     colorWake:"#ffe6b3", colorDream:"#fff7e6",
-    wake:{ mantra:"Softly revealed", seed:"Relax jaw/eyes; whisper your name kindly." },
+    wake:{ mantra:"Softly revealed", seed:"Relax jaw/eyes; say your name kindly." },
     dream:{ mantra:"Tender core", seed:"Cup hands at sternum; small candle." },
     note:"Vulnerability threshold."
   },
   { title:"State of Grace (Taylor’s Version)", id:"-mrC5tRkxrY", fallback:"-mrC5tRkxrY",
     colorWake:"#8fe3f6", colorDream:"#bfeff8",
     wake:{ mantra:"Wide horizon", seed:"Spine tall; crown to sky." },
-    dream:{ mantra:"Ever gentle", seed:"Wind through trees; lengthen exhale." },
+    dream:{ mantra:"Ever gentle", seed:"Wind through trees; long exhale." },
     note:"Open sky, foundational field."
   },
   { title:"All Too Well — Short Film", id:"tollGa3S0o8", fallback:"sRxrwjOtIag",
     colorWake:"#7a1f2b", colorDream:"#ad5a67",
-    wake:{ mantra:"Remember, release", seed:"Name the lesson; let it dissolve." },
+    wake:{ mantra:"Remember, release", seed:"Name the lesson; dissolve." },
     dream:{ mantra:"Wash me free", seed:"Warm rain rinses the scene." },
     note:"Depth, memory excavation."
   },
@@ -201,37 +193,24 @@ const TRACKS = [
   }
 ];
 
-/* ---------- State ---------- */
-let index = 0; let loopQueue = true; const app = document.body;
+/* ---------- State & elements ---------- */
+let index=0, loopQueue=true;
+const app=document.body;
+const videoSelect=document.getElementById('videoSelect');
+const prevBtn=document.getElementById('prev'), nextBtn=document.getElementById('next');
+const playBtn=document.getElementById('play'), pauseBtn=document.getElementById('pause');
+const loopChk=document.getElementById('loop');
+const meta=document.getElementById('meta'), mantras=document.getElementById('mantras');
+const trackList=document.getElementById('trackList');
+const wakeBtn=document.getElementById('wakeBtn'), dreamBtn=document.getElementById('dreamBtn');
+const bgBtn=document.getElementById('bgMode'), airBtn=document.getElementById('airplayBtn');
+const bgAudio=document.getElementById('bgAudio');
+const miniTitle=document.getElementById('miniTitle');
+const mPrev=document.getElementById('mPrev'), mNext=document.getElementById('mNext');
+const mPlay=document.getElementById('mPlay'), mPause=document.getElementById('mPause');
+const mTone=document.getElementById('mTone'), mAir=document.getElementById('mAir');
 
-/* ---------- Elements ---------- */
-const yt = document.getElementById('yt');
-const videoSelect = document.getElementById('videoSelect');
-const prevBtn = document.getElementById('prev');
-const nextBtn = document.getElementById('next');
-const playBtn = document.getElementById('play');
-const pauseBtn = document.getElementById('pause');
-const loopChk = document.getElementById('loop');
-const meta = document.getElementById('meta');
-const mantras = document.getElementById('mantras');
-const trackList = document.getElementById('trackList');
-const wakeBtn = document.getElementById('wakeBtn');
-const dreamBtn = document.getElementById('dreamBtn');
-const bgBtn = document.getElementById('bgMode');
-const airBtn = document.getElementById('airplayBtn');
-const bgAudio = document.getElementById('bgAudio');
-
-/* Mini controls */
-const mini = document.getElementById('mini');
-const miniTitle = document.getElementById('miniTitle');
-const mPrev = document.getElementById('mPrev');
-const mNext = document.getElementById('mNext');
-const mPlay = document.getElementById('mPlay');
-const mPause = document.getElementById('mPause');
-const mTone = document.getElementById('mTone');
-const mAir = document.getElementById('mAir');
-
-/* ---------- Build UI ---------- */
+/* ---------- Build list ---------- */
 function option(t,i){ const o=document.createElement('option'); o.value=i; o.textContent=t.title; return o; }
 TRACKS.forEach((t,i)=>videoSelect.appendChild(option(t,i)));
 
@@ -250,45 +229,41 @@ function trackRow(t,i){
 function rebuildList(){ trackList.innerHTML=''; TRACKS.forEach((t,i)=>trackList.appendChild(trackRow(t,i))); highlightActive(); }
 function highlightActive(){ [...trackList.children].forEach(el=>el.classList.toggle('active', +el.dataset.index===index)); }
 
-/* ---------- Load / Play ---------- */
-function embedUrl(id){ return `https://www.youtube.com/embed/${id}?autoplay=0&rel=0&modestbranding=1&enablejsapi=1`; }
+/* ---------- YouTube Player (with reliable end detection) ---------- */
+let player=null;
+function onYouTubeIframeAPIReady(){
+  player = new YT.Player('yt', {
+    width: '100%', height: '100%', videoId: TRACKS[0].id,
+    playerVars: { rel:0, modestbranding:1, playsinline:1, autoplay:0 },
+    events: {
+      'onReady': ()=>{ load(0,false); },
+      'onStateChange': onPlayerStateChange
+    }
+  });
+}
+function onPlayerStateChange(ev){
+  if(ev.data === YT.PlayerState.ENDED){
+    step(+1);
+  }
+}
+
+/* ---------- Load / Play controls ---------- */
 function load(i,scrollTo=false){
-  index = (i+TRACKS.length)%TRACKS.length;
+  index=(i+TRACKS.length)%TRACKS.length;
   videoSelect.value=index;
-  const t = TRACKS[index];
-  yt.src = embedUrl(t.id);
-  setMediaSession(t.title);
-  updateMeta(); highlightActive();
+  const t=TRACKS[index];
+  if(player && player.loadVideoById){ player.loadVideoById(t.id, 0, "large"); player.pauseVideo(); }
+  updateMeta(); highlightActive(); setMediaSession(t.title);
   if(scrollTo){ trackList.children[index]?.scrollIntoView({block:'nearest'}); }
 }
-function updateMeta(){
-  const t=TRACKS[index];
-  miniTitle.textContent = t.title;
-  meta.innerHTML = `<strong>${t.title}</strong> · <span class="pill">${app.dataset.mode==='wake'?'Wake':'Dream'}</span>`;
-  renderMantras();
-  document.documentElement.style.setProperty('--accent', app.dataset.mode==='wake'?t.colorWake:t.colorDream);
-}
-function renderMantras(){
-  const t=TRACKS[index]; const pack=app.dataset.mode==='wake'?t.wake:t.dream;
-  mantras.innerHTML = `<div><strong>Mantra:</strong> ${pack.mantra}</div><div class="seed"><strong>Seed:</strong> ${pack.seed}</div>`;
-}
-
-/* ---------- Seeds ---------- */
-function showSeed(i){
-  const t=TRACKS[i], pack = app.dataset.mode==='wake'?t.wake:t.dream;
-  alert(`${t.title} — ${app.dataset.mode.toUpperCase()}\n\nMantra: ${pack.mantra}\n\nSeed: ${pack.seed}`);
-}
-
-/* ---------- Transport ---------- */
+function play(){ if(player) player.playVideo(); }
+function pause(){ if(player) player.pauseVideo(); }
 prevBtn.onclick=()=>step(-1); nextBtn.onclick=()=>step(+1);
 mPrev.onclick=()=>step(-1); mNext.onclick=()=>step(+1);
-loopChk.onchange=()=>{ loopQueue = loopChk.checked; };
+loopChk.onchange=()=>{ loopQueue=loopChk.checked; };
 videoSelect.onchange=()=>{ load(+videoSelect.value,true); };
-playBtn.onclick=miniPlay; pauseBtn.onclick=miniPause;
-mPlay.onclick=miniPlay; mPause.onclick=miniPause;
-
-function miniPlay(){ yt.contentWindow && yt.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}','*'); }
-function miniPause(){ yt.contentWindow && yt.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}','*'); }
+playBtn.onclick=play; pauseBtn.onclick=pause;
+mPlay.onclick=play; mPause.onclick=pause;
 
 function step(dir){
   const next = index+dir;
@@ -297,7 +272,7 @@ function step(dir){
   load((next+TRACKS.length)%TRACKS.length,true);
 }
 
-/* ---------- Mode (Wake/Dream) ---------- */
+/* ---------- Mode ---------- */
 wakeBtn.onclick=()=>setMode('wake'); dreamBtn.onclick=()=>setMode('dream');
 function setMode(m){
   app.dataset.mode=m;
@@ -307,25 +282,24 @@ function setMode(m){
   updateMeta(); rebuildList();
 }
 
-/* ---------- Tone bed (Web Audio) ---------- */
+/* ---------- Tone bed (Web Audio) w/ 128.15 ---------- */
 let AC=null, osc=null, gainNode=null, muted=false;
 const toneToggle=document.getElementById('toneToggle');
 const freqSel=document.getElementById('freq');
 const gain=document.getElementById('gain');
 const mute=document.getElementById('mute');
-
 toneToggle.onclick=()=>{
   if(!AC){
     AC=new (window.AudioContext||window.webkitAudioContext)();
     osc=AC.createOscillator(); gainNode=AC.createGain();
-    osc.type='sine'; osc.frequency.value=+freqSel.value;
+    osc.type='sine'; osc.frequency.value=+freqSel.value; // fractional ok (128.15)
     gainNode.gain.value=+gain.value;
     osc.connect(gainNode).connect(AC.destination);
     osc.start();
     toneToggle.textContent='Disable Tone';
     toneToggle.setAttribute('aria-pressed','true');
   }else{
-    osc.stop(); AC.close(); AC=null; osc=null; gainNode=null;
+    try{osc.stop();}catch(e){} AC.close(); AC=null; osc=null; gainNode=null;
     toneToggle.textContent='Enable Tone';
     toneToggle.setAttribute('aria-pressed','false');
   }
@@ -338,46 +312,53 @@ mute.onclick=()=>{
 };
 mTone.onclick=()=>toneToggle.click();
 
-/* ---------- Background Mode + AirPlay ---------- */
-/* We play a tiny looping tone through an <audio> element so iOS keeps audio alive screen-off,
-   and so users can AirPlay that safe/background stream. */
+/* ---------- Background Mode + AirPlay (robust) ---------- */
 let bgOn=false;
-bgBtn.onclick=toggleBG; mAir.onclick=()=>airBtn.click();
+document.getElementById('mAir').onclick=()=>airBtn.click();
 airBtn.onclick=()=>{
   if(bgAudio && typeof bgAudio.webkitShowPlaybackTargetPicker==='function'){
     try{ bgAudio.webkitShowPlaybackTargetPicker(); }catch(e){}
-  }else{
-    alert("AirPlay picker not available on this device/browser.");
-  }
+  }else{ alert("AirPlay picker not available here."); }
 };
+bgBtn.onclick=toggleBG;
 function toggleBG(){
   if(!bgOn){
-    // Generate a quiet 2-second WAV dataURL (sine @ 256Hz) and loop it:
-    bgAudio.src = makeWavDataUrl(256, 2, 0.03);
-    bgAudio.play().then(()=>{
-      navigator.mediaSession && setMediaSession(TRACKS[index].title);
-      bgOn=true; bgBtn.textContent='Background Mode: On';
-    }).catch(()=>alert("Tap Play first, then enable Background Mode."));
+    // Ensure a real audio stream (inline WAV) is present and audible:
+    bgAudio.src = makeWavDataUrl(+freqSel.value || 128.15, 3, 0.06); // 3s loop, slightly louder
+    const start = bgAudio.play();
+    if(start && start.catch){ start.catch(()=>alert("Tap Play once, then enable Background Mode.")); }
+    bgOn=true; bgBtn.textContent='Background Mode: On';
   }else{
     bgAudio.pause(); bgOn=false; bgBtn.textContent='Background Mode: Off';
   }
 }
 
-/* Media Session (lock screen controls + metadata) */
+/* Media Session: lock-screen control */
 function setMediaSession(title){
   if('mediaSession' in navigator){
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title, artist:'Taylor Swift · EMBER', album:'Illumina Anchor'
-    });
+    navigator.mediaSession.metadata = new MediaMetadata({ title, artist:'Taylor Swift · EMBER', album:'Illumina Anchor' });
     navigator.mediaSession.setActionHandler('previoustrack', ()=>step(-1));
     navigator.mediaSession.setActionHandler('nexttrack', ()=>step(+1));
-    navigator.mediaSession.setActionHandler('play', miniPlay);
-    navigator.mediaSession.setActionHandler('pause', miniPause);
+    navigator.mediaSession.setActionHandler('play', play);
+    navigator.mediaSession.setActionHandler('pause', pause);
   }
 }
 
-/* Build an inline WAV (mono) data URL to keep audio active / AirPlayable */
-function makeWavDataUrl(freq=256, seconds=2, amplitude=0.03){
+/* ---------- UI updates ---------- */
+function updateMeta(){
+  const t=TRACKS[index], pack=app.dataset.mode==='wake'?t.wake:t.dream;
+  miniTitle.textContent=t.title;
+  meta.innerHTML = `<strong>${t.title}</strong> · <span class="pill">${app.dataset.mode==='wake'?'Wake':'Dream'}</span>`;
+  mantras.innerHTML = `<div><strong>Mantra:</strong> ${pack.mantra}</div><div class="seed"><strong>Seed:</strong> ${pack.seed}</div>`;
+  document.documentElement.style.setProperty('--accent', app.dataset.mode==='wake'?t.colorWake:t.colorDream);
+}
+function showSeed(i){
+  const t=TRACKS[i], pack = app.dataset.mode==='wake'?t.wake:t.dream;
+  alert(`${t.title} — ${app.dataset.mode.toUpperCase()}\n\nMantra: ${pack.mantra}\n\nSeed: ${pack.seed}`);
+}
+
+/* ---------- Inline WAV builder (fractional freq OK) ---------- */
+function makeWavDataUrl(freq, seconds, amplitude){
   const rate=44100, N=Math.floor(rate*seconds), buf=new Uint8Array(44+N*2);
   function wr(off, val, bytes){ for(let i=0;i<bytes;i++) buf[off+i]=(val>>(8*i))&255; }
   // RIFF/WAVE header
@@ -386,9 +367,9 @@ function makeWavDataUrl(freq=256, seconds=2, amplitude=0.03){
   buf.set([100,97,116,97],36); wr(40,N*2,4);
   // samples
   for(let n=0;n<N;n++){
-    const t=n/rate, s=Math.sin(2*Math.PI*freq*t)*amplitude;
-    const v=Math.max(-1,Math.min(1,s)); const w=Math.floor(v*32767);
-    wr(44+n*2, w<0? w+65536:w, 2);
+    const t=n/rate, s=Math.sin(2*Math.PI*freq*t)*amplitude; // freq may be 128.15
+    const v=Math.max(-1,Math.min(1,s)); const w=(v*32767)|0; // 16-bit
+    wr(44+n*2, w<0? w+65536 : w, 2);
   }
   return 'data:audio/wav;base64,'+btoa(String.fromCharCode(...buf));
 }
@@ -396,10 +377,6 @@ function makeWavDataUrl(freq=256, seconds=2, amplitude=0.03){
 /* ---------- Init ---------- */
 function rebuild(){ rebuildList(); load(0,false); }
 rebuild();
-
-/* --------- Mini quick bindings --------- */
-mPlay.addEventListener('click', miniPlay);
-mPause.addEventListener('click', miniPause);
 </script>
 </body>
 </html>
