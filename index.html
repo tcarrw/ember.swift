@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EMBER · Swift — Wake / Dream</title>
+<meta name="theme-color" content="#0b0d11">
+<style>
+  :root{
+    --bg:#0b0d11; --ink:#e9ecf1; --ink-dim:#aeb6c3;
+    --ember: #ff6a3d; --rose:#f2a2b6; --lav:#d5c7ff; --gold:#f4d06f; --aqua:#7bdff2; --garnet:#7a1f2b; --periw:#b5c7ff;
+    --card:#12161c; --card-2:#0f1318; --line:#1c2430;
+    --accent: var(--ember);
+  }
+  [data-mode="dream"]{
+    --bg:#0a0b12; --ink:#e6e8ff; --accent:#d5c7ff;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:radial-gradient(1200px 800px at 80% -10%, rgba(255,106,61,.18), transparent 60%),
+               radial-gradient(900px 600px at -10% 110%, rgba(213,199,255,.15), transparent 60%),
+               var(--bg);
+    color:var(--ink); font:14.5px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, sans-serif;
+  }
+  header{
+    padding:16px 20px; display:flex; align-items:center; justify-content:space-between; gap:12px;
+    position:sticky; top:0; background:linear-gradient(180deg, rgba(10,12,17,.9), rgba(10,12,17,.6) 60%, transparent);
+    backdrop-filter:saturate(1.2) blur(8px); z-index:10; border-bottom:1px solid var(--line);
+  }
+  .brand{display:flex; align-items:center; gap:10px; letter-spacing:.12em; text-transform:uppercase; font-weight:700}
+  .ember-dot{width:10px; height:10px; border-radius:50%; background:var(--accent); box-shadow:0 0 18px var(--accent)}
+  .mode{
+    display:flex; gap:8px; align-items:center; background:var(--card); border:1px solid var(--line); border-radius:999px; padding:6px;
+  }
+  .mode button{
+    appearance:none; border:0; background:transparent; color:var(--ink-dim); padding:6px 10px; border-radius:999px; cursor:pointer
+  }
+  .mode button.active{background:var(--accent); color:#0b0d11; font-weight:700}
+  main{display:grid; grid-template-columns:1.1fr .9fr; gap:16px; padding:16px; max-width:1200px; margin:0 auto}
+  @media (max-width:980px){ main{grid-template-columns:1fr; padding:12px} }
+  .panel{
+    background:linear-gradient(180deg, var(--card), var(--card-2));
+    border:1px solid var(--line); border-radius:16px; overflow:hidden;
+  }
+  .panel h2{margin:0; padding:14px 16px; border-bottom:1px solid var(--line); font-size:13px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-dim)}
+  .player-wrap{padding:12px}
+  .player{aspect-ratio:16/9; width:100%; border:0; border-radius:12px; background:#000}
+  .controls{
+    margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:space-between
+  }
+  .btn, select, input[type="range"]{
+    background:#12161c; color:var(--ink); border:1px solid var(--line); border-radius:10px; padding:8px 10px; font:inherit
+  }
+  .btn{cursor:pointer}
+  .row{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+  .list{max-height:460px; overflow:auto}
+  .track{display:grid; grid-template-columns:auto 1fr auto; gap:10px; align-items:center; padding:10px 12px; border-bottom:1px solid var(--line)}
+  .track.active{background:rgba(255,255,255,.03); border-left:3px solid var(--accent)}
+  .seed{font-size:11px; color:var(--ink-dim)}
+  .pill{font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--line); color:var(--ink-dim)}
+  .tone{
+    padding:12px 12px 14px; display:grid; gap:10px; border-top:1px dashed var(--line)
+  }
+  .tone-grid{display:grid; grid-template-columns:1fr 1fr; gap:8px}
+  .meta{padding:12px; color:var(--ink-dim); font-size:13px; border-top:1px solid var(--line)}
+  .mantras{display:grid; gap:6px; padding:10px 12px; border-top:1px dashed var(--line); background:linear-gradient(180deg, rgba(255,106,61,.07), transparent)}
+  .mantras div{font-size:12.5px}
+  .tiny{opacity:.8; font-size:12px}
+  .loop{margin-left:8px}
+</style>
+</head>
+<body data-mode="wake">
+<header>
+  <div class="brand"><span class="ember-dot"></span> EMBER · Swift</div>
+  <div class="mode">
+    <button id="wakeBtn" class="active" aria-pressed="true">Wake</button>
+    <button id="dreamBtn" aria-pressed="false">Dream</button>
+  </div>
+</header>
+
+<main>
+  <!-- LEFT: Player & transport -->
+  <section class="panel">
+    <h2>Player · Wake / Dream</h2>
+    <div class="player-wrap">
+      <iframe id="yt" class="player" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+
+      <div class="controls">
+        <div class="row">
+          <button class="btn" id="prev">◀︎ Prev</button>
+          <button class="btn" id="next">Next ▶︎</button>
+          <label class="pill"><input id="loop" class="loop" type="checkbox" checked> Loop queue</label>
+        </div>
+        <div class="row">
+          <select id="videoSelect" title="Choose a song"></select>
+          <button class="btn" id="play">Play</button>
+          <button class="btn" id="pause">Pause</button>
+        </div>
+      </div>
+
+      <div class="tone">
+        <div class="row"><strong>Tone bed</strong><span class="tiny"> · 128 / 160 / 256 Hz</span></div>
+        <div class="tone-grid">
+          <div class="row">
+            <button class="btn" id="toneToggle" aria-pressed="false">Enable Tone</button>
+            <select id="freq">
+              <option value="128">128 Hz (root)</option>
+              <option value="160">160 Hz (magnet)</option>
+              <option value="256">256 Hz (clarity)</option>
+            </select>
+          </div>
+          <div class="row">
+            <input id="gain" type="range" min="0" max="1" step="0.01" value="0.18" aria-label="Tone volume">
+            <button class="btn" id="mute">Mute</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="meta" id="meta"></div>
+      <div class="mantras" id="mantras"></div>
+    </div>
+  </section>
+
+  <!-- RIGHT: Song list with seeds -->
+  <section class="panel">
+    <h2>Seven · Seeds</h2>
+    <div class="list" id="trackList"></div>
+    <div class="meta tiny">Design notes: fire-vein overlays (alter.fire), cyclical pallette shift (t=m=e=d), and froot seeds per track.</div>
+  </section>
+</main>
+
+<script>
+/* ---------- Data: 7 official tracks (with fallbacks + Illumina mapping) ---------- */
+const TRACKS = [
+  {
+    title:"Lover",
+    id:"-BjZmE2gtdo",
+    fallback:"cvUAzpn48xA",
+    colorWake:"#f2a2b6", colorDream:"#d5c7ff",
+    wake:{ mantra:"We are whole", seed:"Hold a 30s soft-breath gaze; imagine a rose-pink ring around both hearts." },
+    dream:{ mantra:"Soul’s embrace", seed:"Picture a small lavender orb pulsing between you; breathe 4-6 until calm." },
+    note:"Resonance of union / safe heart."
+  },
+  {
+    title:"august",
+    id:"nn_0zPAfyo8",
+    fallback:"yA8Lm2XbQVk",
+    colorWake:"#f4d06f", colorDream:"#f2b4a6",
+    wake:{ mantra:"Soft light lingers", seed:"Recall one warm memory; let it glow from solar plexus outward." },
+    dream:{ mantra:"Fade into you", seed:"Let the body feel weightless; float the scene away like mist." },
+    note:"Transient magic / memory cultivation."
+  },
+  {
+    title:"exile (ft. Bon Iver)",
+    id:"osdoLjUNFnA",
+    fallback:"ZmPIi5kCc2k",
+    colorWake:"#7f8aa5", colorDream:"#e6eef8",
+    wake:{ mantra:"Call and echo", seed:"Trace a slow figure-eight with your index finger at heart level." },
+    dream:{ mantra:"Cross our miles", seed:"Visualize a silver thread connecting two shores; breathe along it." },
+    note:"Dual fields, meeting edges."
+  },
+  {
+    title:"Delicate",
+    id:"tCXGJQYZ9JA",
+    fallback:"tCXGJQYZ9JA",
+    colorWake:"#ffe6b3", colorDream:"#fff7e6",
+    wake:{ mantra:"Softly revealed", seed:"Relax jaw/eyes; whisper your name kindly once." },
+    dream:{ mantra:"Tender core", seed:"Cup both hands at sternum; feel a small candle there." },
+    note:"Vulnerability threshold."
+  },
+  {
+    title:"State of Grace (Taylor’s Version)",
+    id:"-mrC5tRkxrY",
+    fallback:"-mrC5tRkxrY",
+    colorWake:"#8fe3f6", colorDream:"#bfeff8",
+    wake:{ mantra:"Wide horizon", seed:"Stand or sit tall; crown lifts like sky opening." },
+    dream:{ mantra:"Ever gentle", seed:"Picture wind moving through trees; lengthen exhale." },
+    note:"Open sky, foundational field."
+  },
+  {
+    title:"All Too Well — Short Film",
+    id:"tollGa3S0o8",
+    fallback:"sRxrwjOtIag",
+    colorWake:"#7a1f2b", colorDream:"#ad5a67",
+    wake:{ mantra:"Remember, release", seed:"Name the lesson aloud once; let it dissolve." },
+    dream:{ mantra:"Wash me free", seed:"Imagine warm rain rinsing the scene into earth." },
+    note:"Depth, memory excavation."
+  },
+  {
+    title:"The Archer",
+    id:"8KpKc3C9V3w",
+    fallback:"8KpKc3C9V3w",
+    colorWake:"#b5c7ff", colorDream:"#cdbdff",
+    wake:{ mantra:"Aim into light", seed:"See a steady target; align breath to the center." },
+    dream:{ mantra:"See my heart", seed:"Hand on chest; count 5 heartbeats softly." },
+    note:"Inner witness, shadow/light integration."
+  }
+];
+
+/* ---------- State ---------- */
+let index = 0;
+let loopQueue = true;
+const app = document.body;
+
+/* ---------- Elements ---------- */
+const yt = document.getElementById('yt');
+const videoSelect = document.getElementById('videoSelect');
+const prevBtn = document.getElementById('prev');
+const nextBtn = document.getElementById('next');
+const playBtn = document.getElementById('play');
+const pauseBtn = document.getElementById('pause');
+const loopChk = document.getElementById('loop');
+const meta = document.getElementById('meta');
+const mantras = document.getElementById('mantras');
+const trackList = document.getElementById('trackList');
+const wakeBtn = document.getElementById('wakeBtn');
+const dreamBtn = document.getElementById('dreamBtn');
+
+/* ---------- Build UI ---------- */
+function option(t,i){
+  const o=document.createElement('option');
+  o.value=i; o.textContent=t.title; return o;
+}
+TRACKS.forEach((t,i)=>videoSelect.appendChild(option(t,i)));
+
+function trackRow(t,i){
+  const row=document.createElement('div');
+  row.className='track';
+  row.dataset.index=i;
+  const dot=document.createElement('div');
+  dot.className='ember-dot'; dot.style.width='8px'; dot.style.height='8px';
+  dot.style.background=app.dataset.mode==='wake'?t.colorWake:t.colorDream;
+  const title=document.createElement('div');
+  title.innerHTML=`<strong>${t.title}</strong><div class="tiny">${t.note}</div>`;
+  const actions=document.createElement('div');
+  const seed=document.createElement('button');
+  seed.className='btn'; seed.textContent='Seed';
+  seed.onclick=()=>showSeed(i);
+  actions.appendChild(seed);
+  row.appendChild(dot); row.appendChild(title); row.appendChild(actions);
+  row.onclick=(e)=>{ if(e.target===seed) return; load(i,true); };
+  return row;
+}
+function rebuildList(){
+  trackList.innerHTML='';
+  TRACKS.forEach((t,i)=>trackList.appendChild(trackRow(t,i)));
+  highlightActive();
+}
+function highlightActive(){
+  [...trackList.children].forEach(el=>el.classList.toggle('active', +el.dataset.index===index));
+}
+
+/* ---------- Load / Play ---------- */
+function embedUrl(id){ return `https://www.youtube.com/embed/${id}?autoplay=0&rel=0&modestbranding=1`; }
+function load(i,scrollTo=false){
+  index = (i+TRACKS.length)%TRACKS.length;
+  videoSelect.value=index;
+  const t = TRACKS[index];
+  // Try primary; if blocked, allow user to switch via toggle later
+  yt.src = embedUrl(t.id);
+  updateMeta();
+  highlightActive();
+  if(scrollTo){ trackList.children[index]?.scrollIntoView({block:'nearest'}); }
+}
+function updateMeta(){
+  const t=TRACKS[index];
+  meta.innerHTML = `<strong>${t.title}</strong> · <span class="pill">${app.dataset.mode==='wake'?'Wake':'Dream'}</span>`;
+  renderMantras();
+  // tint header dot + background whisper
+  document.documentElement.style.setProperty('--accent', app.dataset.mode==='wake'?t.colorWake:t.colorDream);
+}
+function renderMantras(){
+  const t=TRACKS[index];
+  const pack = app.dataset.mode==='wake'?t.wake:t.dream;
+  mantras.innerHTML = `
+    <div><strong>Mantra:</strong> ${pack.mantra}</div>
+    <div class="seed"><strong>Seed:</strong> ${pack.seed}</div>
+  `;
+}
+
+/* ---------- Seeds ---------- */
+function showSeed(i){
+  const t=TRACKS[i], pack = app.dataset.mode==='wake'?t.wake:t.dream;
+  alert(`${t.title} — ${app.dataset.mode.toUpperCase()}\n\nMantra: ${pack.mantra}\n\nSeed: ${pack.seed}`);
+}
+
+/* ---------- Transport ---------- */
+prevBtn.onclick=()=>{ step(-1); };
+nextBtn.onclick=()=>{ step(+1); };
+loopChk.onchange=()=>{ loopQueue = loopChk.checked; };
+videoSelect.onchange=()=>{ load(+videoSelect.value,true); };
+playBtn.onclick=()=>{ yt.contentWindow && yt.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*'); };
+pauseBtn.onclick=()=>{ yt.contentWindow && yt.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*'); };
+
+function step(dir){
+  const next = index+dir;
+  if(next<0 && !loopQueue) return;
+  if(next>=TRACKS.length && !loopQueue) return;
+  load((next+TRACKS.length)%TRACKS.length,true);
+}
+
+/* ---------- Mode (Wake/Dream) ---------- */
+wakeBtn.onclick=()=>setMode('wake');
+dreamBtn.onclick=()=>setMode('dream');
+function setMode(m){
+  app.dataset.mode=m;
+  wakeBtn.classList.toggle('active', m==='wake');
+  dreamBtn.classList.toggle('active', m==='dream');
+  wakeBtn.setAttribute('aria-pressed', m==='wake'); dreamBtn.setAttribute('aria-pressed', m==='dream');
+  updateMeta(); rebuildList();
+}
+
+/* ---------- Tone bed (Web Audio) ---------- */
+let AC=null, osc=null, gainNode=null, muted=false;
+const toneToggle=document.getElementById('toneToggle');
+const freqSel=document.getElementById('freq');
+const gain=document.getElementById('gain');
+const mute=document.getElementById('mute');
+
+toneToggle.onclick=()=>{
+  if(!AC){
+    AC=new (window.AudioContext||window.webkitAudioContext)();
+    osc=AC.createOscillator(); gainNode=AC.createGain();
+    osc.type='sine'; osc.frequency.value=+freqSel.value;
+    gainNode.gain.value=+gain.value;
+    osc.connect(gainNode).connect(AC.destination);
+    osc.start();
+    toneToggle.textContent='Disable Tone';
+    toneToggle.setAttribute('aria-pressed','true');
+  }else{
+    osc.stop(); AC.close();
+    AC=null; osc=null; gainNode=null;
+    toneToggle.textContent='Enable Tone';
+    toneToggle.setAttribute('aria-pressed','false');
+  }
+};
+freqSel.onchange=()=>{ if(osc) osc.frequency.value=+freqSel.value; };
+gain.oninput=()=>{ if(gainNode) gainNode.gain.value=+gain.value; };
+mute.onclick=()=>{
+  muted=!muted;
+  if(gainNode){ gainNode.gain.value = muted ? 0 : +gain.value; }
+  mute.textContent = muted ? 'Unmute' : 'Mute';
+};
+
+/* ---------- Init ---------- */
+rebuildList();
+load(0,false);
+</script>
+</body>
+</html>
